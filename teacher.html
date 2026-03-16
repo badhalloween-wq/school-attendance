@@ -8,15 +8,13 @@
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
 import {
-getFirestore,
-doc,
-getDoc,
-addDoc,
-collection,
-query,
-where,
-getDocs
+  getFirestore,
+  doc,
+  getDoc,
+  addDoc,
+  collection
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 import { firebaseConfig } from "./firebase-config.js";
@@ -26,54 +24,35 @@ const db = getFirestore(app);
 
 window.checkStudent = async function(){
 
-const studentId = document.getElementById("studentId").value;
+  const studentId = document.getElementById("studentId").value;
 
-if(!studentId){
-alert("กรอกรหัสนักเรียน");
-return;
-}
+  if(!studentId){
+    alert("กรอกรหัสนักเรียน");
+    return;
+  }
 
-document.getElementById("result").innerHTML="กำลังตรวจสอบ...";
+  document.getElementById("result").innerHTML="กำลังตรวจสอบ...";
 
-const studentRef = doc(db,"students",studentId);
-const studentSnap = await getDoc(studentRef);
+  const studentRef = doc(db,"students",studentId);
+  const studentSnap = await getDoc(studentRef);
 
-if(!studentSnap.exists()){
-document.getElementById("result").innerHTML="❌ ไม่พบรหัสนักเรียน";
-return;
-}
+  if(!studentSnap.exists()){
+    document.getElementById("result").innerHTML="❌ ไม่พบรหัสนักเรียน";
+    return;
+  }
 
-const student = studentSnap.data();
+  const student = studentSnap.data();
 
-const today = new Date().toISOString().slice(0,10);
+  await addDoc(collection(db,"attendance"),{
+    studentId: studentId,
+    name: student.studentName,
+    class: student.class,
+    room: student.room,
+    time: new Date()
+  });
 
-const q = query(
-collection(db,"attendance"),
-where("studentId","==",studentId),
-where("date","==",today)
-);
-
-const check = await getDocs(q);
-
-if(!check.empty){
-document.getElementById("result").innerHTML=
-"⚠️ เช็คชื่อแล้ววันนี้<br>"+student.studentName;
-return;
-}
-
-await addDoc(collection(db,"attendance"),{
-studentId:studentId,
-name:student.studentName,
-class:student.class,
-room:student.room,
-date:today,
-time:new Date().toLocaleTimeString(),
-method:"teacher"
-});
-
-document.getElementById("result").innerHTML=
-"✅ เช็คชื่อแทนสำเร็จ<br>"+
-student.studentName+" "+student.class+"/"+student.room;
+  document.getElementById("result").innerHTML=
+  "✅ เช็คชื่อสำเร็จ<br>"+student.studentName+" "+student.class+"/"+student.room;
 
 }
 
@@ -81,20 +60,14 @@ student.studentName+" "+student.class+"/"+student.room;
 
 </head>
 
-<body style="font-family:sans-serif;text-align:center">
+<body>
 
-<h2>👨‍🏫 ครูเช็คชื่อแทนนักเรียน</h2>
+<h2>เช็คชื่อแทนนักเรียน</h2>
 
-<input id="studentId" placeholder="รหัสนักเรียน" style="font-size:18px;padding:8px">
+<input id="studentId" placeholder="กรอกรหัสนักเรียน">
+<button onclick="checkStudent()">เช็คชื่อ</button>
 
-<br><br>
-
-<button onclick="checkStudent()" style="t-size:20px;padding:10px”>
-เช็คชื่อแทน
-<h3 id="result"></h3>
+<div id="result"></div>
 
 </body>
 </html>
-
-
-  
