@@ -8,22 +8,33 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-
 <script src="firebase-config.js"></script>
+
 </head>
 
 <body>
 
 <h2>ระบบเช็คชื่อ</h2>
 
-เลือกห้อง
+<div class="controls">
 
-<select id="roomSelect">
-<option value="1">ม.3/1</option>
-<option value="2">ม.3/2</option>
+<label>เลือกชั้น</label>
+<select id="classSelect">
+<option value="3">ม.3</option>
 </select>
 
+<label>ห้อง</label>
+<select id="roomSelect">
+<option value="1">1</option>
+<option value="2">2</option>
+</select>
+
+<button onclick="loadStudents()">โหลดรายชื่อ</button>
+
+</div>
+
 <table>
+
 <thead>
 <tr>
 <th>รหัส</th>
@@ -46,7 +57,6 @@ const db = firebase.firestore()
 
 const table = document.getElementById("studentTable")
 const log = document.getElementById("log")
-const roomSelect = document.getElementById("roomSelect")
 
 function writeLog(msg){
 log.innerHTML += msg + "<br>"
@@ -56,31 +66,31 @@ async function loadStudents(){
 
 table.innerHTML=""
 
-const room = roomSelect.value
+const classLevel = document.getElementById("classSelect").value
+const room = document.getElementById("roomSelect").value
 
-writeLog("โหลดข้อมูลห้อง "+room)
+writeLog("โหลด ม."+classLevel+"/"+room)
 
 const studentsSnapshot = await db.collection("students").get()
 const attendanceSnapshot = await db.collection("attendance").get()
-
-writeLog("students:"+studentsSnapshot.size)
-writeLog("attendance:"+attendanceSnapshot.size)
 
 let attendanceMap = {}
 
 attendanceSnapshot.forEach(doc=>{
 
-const a = doc.data()
+const data = doc.data()
 
-attendanceMap[a.studentId] = a.time
+attendanceMap[data.studentId] = data.time
 
 })
 
 studentsSnapshot.forEach(doc=>{
 
 const data = doc.data()
+
 const studentId = doc.id
 
+if(data.class != classLevel) return
 if(data.room != room) return
 
 let status = "ยังไม่มา"
@@ -100,8 +110,7 @@ time = new Date(t.seconds*1000).toLocaleTimeString()
 
 const row = document.createElement("tr")
 
-row.innerHTML=`
-
+row.innerHTML = `
 <td>${studentId}</td>
 <td>${data.studentName}</td>
 <td>${data.room}</td>
@@ -112,7 +121,6 @@ ${status}<br>
 เช็คชื่อ
 </button>
 </td>
-
 `
 
 table.appendChild(row)
@@ -137,8 +145,6 @@ writeLog("เช็คชื่อ "+name)
 loadStudents()
 
 }
-
-roomSelect.addEventListener("change",loadStudents)
 
 loadStudents()
 
