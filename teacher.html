@@ -8,6 +8,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
 <script src="firebase-config.js"></script>
 
 </head>
@@ -64,6 +65,8 @@ log.innerHTML += msg + "<br>"
 
 async function loadStudents(){
 
+try{
+
 table.innerHTML=""
 
 const classLevel = document.getElementById("classSelect").value
@@ -73,6 +76,9 @@ writeLog("โหลด ม."+classLevel+"/"+room)
 
 const studentsSnapshot = await db.collection("students").get()
 const attendanceSnapshot = await db.collection("attendance").get()
+
+writeLog("students: "+studentsSnapshot.size)
+writeLog("attendance: "+attendanceSnapshot.size)
 
 let attendanceMap = {}
 
@@ -90,20 +96,20 @@ const data = doc.data()
 
 const studentId = doc.id
 
-if(data.class != classLevel) return
-if(data.room != room) return
+if(String(data.class) !== String(classLevel)) return
+if(String(data.room) !== String(room)) return
 
 let status = "ยังไม่มา"
 let time = "-"
 
 if(attendanceMap[studentId]){
 
-status="มา"
+status = "มา"
 
 const t = attendanceMap[studentId]
 
 if(t.seconds){
-time = new Date(t.seconds*1000).toLocaleTimeString()
+time = new Date(t.seconds * 1000).toLocaleTimeString()
 }
 
 }
@@ -127,22 +133,36 @@ table.appendChild(row)
 
 })
 
+}catch(error){
+
+writeLog("ERROR: "+error)
+
+}
+
 }
 
 async function checkIn(studentId,name,room){
 
+try{
+
 await db.collection("attendance").add({
 
-studentId:studentId,
-name:name,
-room:room,
-time:firebase.firestore.FieldValue.serverTimestamp()
+studentId: studentId,
+name: name,
+room: room,
+time: firebase.firestore.FieldValue.serverTimestamp()
 
 })
 
 writeLog("เช็คชื่อ "+name)
 
 loadStudents()
+
+}catch(error){
+
+writeLog("ERROR: "+error)
+
+}
 
 }
 
