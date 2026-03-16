@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -51,8 +50,9 @@ window.checkStudent = async function(){
     time: new Date()
   });
 
-  document.getElementById("result").innerHTML=
-  "✅ เช็คชื่อสำเร็จ<br>"+student.studentName+" "+student.class+"/"+student.room;
+  document.getElementById("result").innerHTML =
+  "✅ เช็คชื่อสำเร็จ <br>" +
+  student.studentName + " " + student.class + "/" + student.room;
 
 }
 
@@ -60,12 +60,19 @@ window.checkStudent = async function(){
 
 </head>
 
-<body>
+<body style="font-family:sans-serif;text-align:center;margin-top:60px;">
 
 <h2>เช็คชื่อแทนนักเรียน</h2>
 
-<input id="studentId" placeholder="กรอกรหัสนักเรียน">
-<button onclick="checkStudent()">เช็คชื่อ</button>
+<input id="studentId" placeholder="กรอกรหัสนักเรียน" style="font-size:20px;padding:10px">
+
+<br><br>
+
+<button onclick="checkStudent()" style="font-size:20px;padding:10px 30px">
+เช็คชื่อ
+</button>
+
+<br><br>
 
 <div id="result"></div>
 
