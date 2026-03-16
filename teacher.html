@@ -1,16 +1,39 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+
 <meta charset="UTF-8">
-
-<title>Teacher Attendance</title>
-
-<link rel="stylesheet" href="style.css">
+<title>ระบบเช็คชื่อ</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
 <script src="firebase-config.js"></script>
+
+<style>
+
+body{
+font-family:sans-serif;
+padding:20px;
+}
+
+table{
+border-collapse:collapse;
+width:100%;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:8px;
+text-align:center;
+}
+
+th{
+background:#eee;
+}
+
+</style>
 
 </head>
 
@@ -19,19 +42,25 @@
 <h2>ระบบเช็คชื่อ</h2>
 
 เลือกห้อง
+
 <select id="roomSelect">
+
 <option value="3/1">ม.3/1</option>
 <option value="3/2">ม.3/2</option>
+<option value="3/3">ม.3/3</option>
+
 </select>
 
 <table>
 
 <thead>
 <tr>
+
 <th>รหัส</th>
 <th>ชื่อ</th>
 <th>ห้อง</th>
 <th>สถานะ</th>
+
 </tr>
 </thead>
 
@@ -40,60 +69,78 @@
 </table>
 
 <h3>System Log</h3>
+
 <div id="log"></div>
 
 <script>
 
 const db = firebase.firestore()
 
-function log(msg){
-document.getElementById("log").innerHTML += "<div>"+msg+"</div>"
+function log(text){
+
+document.getElementById("log").innerHTML += "<div>"+text+"</div>"
+
 }
 
-function todayDate(){
+function today(){
+
 const d = new Date()
-return d.toISOString().split('T')[0]
+
+return d.toISOString().split("T")[0]
+
 }
 
 async function loadStudents(){
 
 const room = document.getElementById("roomSelect").value
-const today = todayDate()
+const date = today()
 
-log("กำลังโหลดข้อมูล...")
+log("กำลังโหลดนักเรียน ห้อง "+room)
 
 try{
 
-const studentsSnapshot = await db.collection("students")
-.where("room","==",room)
-.get()
+const studentsSnapshot = await db.collection("students").get()
+
+log("โหลด students แล้ว")
 
 const attendanceSnapshot = await db.collection("attendance")
-.where("date","==",today)
+.where("date","==",date)
 .get()
+
+log("โหลด attendance แล้ว")
 
 let attendanceMap = {}
 
 attendanceSnapshot.forEach(doc=>{
 
-const data = doc.data()
+const a = doc.data()
 
-attendanceMap[data.studentId] = data.time
+attendanceMap[a.studentId] = a.time
 
 })
 
 const table = document.getElementById("studentTable")
-table.innerHTML = ""
+
+table.innerHTML=""
 
 studentsSnapshot.forEach(doc=>{
 
 const s = doc.data()
 
-let status = attendanceMap[s.id] ? "มา" : "ยังไม่มา"
+if(s.room != room) return
 
-let time = attendanceMap[s.id] ? attendanceMap[s.id] : "-"
+let status = "ยังไม่มา"
+let time = "-"
+
+if(attendanceMap[s.id]){
+
+status="มา"
+time=attendanceMap[s.id]
+
+}
 
 const row = `
+
 <tr>
 
 <td>${s.id}</td>
@@ -109,13 +156,14 @@ ${status}
 </td>
 
 </tr>
+
 `
 
-table.innerHTML += row
+table.innerHTML+=row
 
 })
 
-log("โหลดข้อมูลสำเร็จ")
+log("โหลดตารางสำเร็จ")
 
 }catch(err){
 
@@ -132,4 +180,5 @@ loadStudents()
 </script>
 
 </body>
+
 </html>
