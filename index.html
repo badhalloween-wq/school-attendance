@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>School Attendance</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+
+</head>
+
+<body>
+
+<h1>School Attendance</h1>
+
+<div class="menu">
+
+<button onclick="openQR()">QR Check-in</button>
+
+<button onclick="manualCheck()">เช็คชื่อแทน</button>
+
+<button onclick="report()">รายงาน</button>
+
+<button onclick="exportExcel()">Export Excel</button>
+
+</div>
+
+<div id="content"></div>
+
+</body>
+</html>
