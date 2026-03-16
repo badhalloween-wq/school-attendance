@@ -10,143 +10,90 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script type="module">
 
-<style>
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+getFirestore,
+doc,
+getDoc,
+collection,
+addDoc,
+query,
+where,
+getDocs
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-body{
-font-family:Arial;
-text-align:center;
-background:#f5f5f5;
-margin:0;
-padding:20px;
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+async function checkStudent(studentId){
+
+document.getElementById("result").innerHTML="กำลังตรวจสอบ...";
+
+const ref = doc(db,"students",studentId);
+const snap = await getDoc(ref);
+
+if(!snap.exists()){
+document.getElementById("result").innerHTML="❌ ไม่พบรหัสนักเรียน";
+return;
 }
 
-button{
-
-padding:15px;
-margin:10px;
-font-size:18px;
-width:200px;
-
-}
-
-#content{
-
-margin-top:20px;
-
-}
-
-img{
-
-margin:10px;
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>ระบบเช็คชื่อนักเรียน</h1>
-
-<button onclick="openQR()">สแกน QR</button>
-<button onclick="report()">รายงานวันนี้</button>
-
-<div id="content"></div>
-
-<script>
-
-const firebaseConfig = {
-
-apiKey: "AIzaSyDw7Fa7nhtJCXx-aUT_iJDpMQMKxbDKrhI",
-  authDomain: "school-attendance-24eda.firebaseapp.com",
-  projectId: "school-attendance-24eda",
-  storageBucket: "school-attendance-24eda.firebasestorage.app",
-  messagingSenderId: "624706301213",
-  appId: "1:624706301213:web:16d552080d727b44b685f4",
-  measurementId: "G-MW47YP6J33"
-
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.firestore();
-
-function openQR(){
-
-const div = document.getElementById("content");
-
-div.innerHTML = `
-<h2>สแกน QR นักเรียน</h2>
-<div id="reader" style="width:300px;margin:auto"></div>
-`;
-
-const scanner = new Html5Qrcode("reader");
-
-scanner.start(
-{ facingMode: "environment" },
-{ fps: 10, qrbox: 250 },
-
-(text)=>{
-
-const parts = text.split("|");
-
-const studentId = parts[0];
-const studentClass = parts[1];
-const name = parts[2];
-
+const student = snap.data();
 const today = new Date().toISOString().slice(0,10);
 
-db.collection("attendance").add({
-
-studentId: studentId,
-class: studentClass,
-name: name,
-date: today,
-time: new Date()
-
-});
-
-alert("เช็คชื่อแล้ว : " + name);
-
-scanner.stop();
-
-}
-
+const q = query(
+collection(db,"attendance"),
+where("studentId","==",studentId),
+where("date","==",today)
 );
 
+const check = await getDocs(q);
+
+if(!check.empty){
+document.getElementById("result").innerHTML=
+"⚠️ เช็คชื่อแล้ววันนี้<br>"+student.studentName;
+return;
 }
 
-function report(){
-
-const div = document.getElementById("content");
-
-const today = new Date().toISOString().slice(0,10);
-
-db.collection("attendance")
-.where("date","==",today)
-.get()
-.then(snapshot=>{
-
-let html = "<h2>รายชื่อวันนี้</h2>";
-
-snapshot.forEach(doc=>{
-
-const d = doc.data();
-
-html += `<p>${d.studentId} - ${d.name}</p>`;
-
+await addDoc(collection(db,"attendance"),{
+studentId:studentId,
+name:student.studentName,
+class:student.class,
+room:student.room,
+date:today,
+time:new Date().toLocaleTimeString()
 });
 
-div.innerHTML = html;
+document.getElementById("result").innerHTML=
+"✅ เช็คชื่อสำเร็จ<br>"+
+student.studentName+" "+student.class+"/"+student.room;
 
+}
+
+window.startScanner=function(){
+
+const scanner=new Html5QrcodeScanner(
+"reader",
+{fps:10,qrbox:250}
+);
+
+scanner.render((decodedText)=>{
+checkStudent(decodedText)
 });
 
 }
 
 </script>
+</head>
+<body style="font-family:sans-serif;text-align:center">
+<h2>📚 ระบบเช็คชื่อนักเรียน</h2>
+<button onclick="startScanner()" style="font-size:20px;padding:10px">
+เริ่มสแกน QR
+</button>
+
 
 </body>
 </html>
