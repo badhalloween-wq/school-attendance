@@ -13,10 +13,30 @@
 
 <h2>เช็คชื่อนักเรียน</h2>
 
-
 <div class="card">
 
 <h3>รายชื่อนักเรียน</h3>
+
+<div class="dashboard">
+
+<div class="stat">
+<span id="totalStudents">0</span>
+<p>นักเรียนทั้งหมด</p>
+</div>
+
+<div class="stat">
+<span id="presentStudents">0</span>
+<p>มาเรียน</p>
+</div>
+
+<div class="stat">
+<span id="absentStudents">0</span>
+<p>ยังไม่มา</p>
+</div>
+
+</div>
+
+<div id="roomButtons" class="room-filter"></div>
 
 <table>
 
@@ -73,6 +93,9 @@ document.getElementById("log").textContent += msg + "\n";
 
 let db;
 
+let currentRoom = "all";
+
+
 try{
 
 log("กำลังเชื่อม Firebase...");
@@ -91,76 +114,11 @@ log("Firebase Error : "+e);
 
 
 
-window.checkStudent = async function(){
-
-try{
-
-const input = document.getElementById("studentId");
-
-const studentId = input.value.trim();
-
-if(!studentId){
-
-document.getElementById("msg").innerText="กรอกรหัสนักเรียน";
-return;
-
-}
-
-log("ค้นหานักเรียน "+studentId);
-
-const ref = doc(db,"students",studentId);
-
-const snap = await getDoc(ref);
-
-
-if(!snap.exists()){
-
-log("ไม่พบข้อมูลนักเรียน");
-
-document.getElementById("msg").innerText="ไม่พบรหัส";
-
-return;
-
-}
-
-
-const s = snap.data();
-
-await addDoc(collection(db,"attendance"),{
-
-studentId:studentId,
-name:s.studentName,
-class:s.class,
-room:s.room,
-time:new Date()
-
-});
-
-
-log("เช็คชื่อสำเร็จ "+s.studentName);
-
-document.getElementById("msg").innerText="เช็คชื่อแล้ว : "+s.studentName;
-
-input.value="";
-
-loadTable();
-
-
-}catch(e){
-
-log("Check Error : "+e);
-
-}
-
-}
-
-
-
 window.markPresent = async function(studentId){
 
 try{
 
-log("เช็คชื่อจากปุ่ม "+studentId);
+log("เช็คชื่อ "+studentId);
 
 const ref = doc(db,"students",studentId);
 
@@ -168,8 +126,7 @@ const snap = await getDoc(ref);
 
 if(!snap.exists()){
 
-log("ไม่พบข้อมูล");
-
+log("ไม่พบข้อมูลนักเรียน");
 return;
 
 }
@@ -185,7 +142,6 @@ room:s.room,
 time:new Date()
 
 });
-
 
 log("บันทึกการเช็คชื่อสำเร็จ");
 
@@ -201,6 +157,44 @@ log("Mark Error : "+e);
 
 
 
+window.selectRoom = function(room){
+
+currentRoom = room;
+
+log("เลือกห้อง "+room);
+
+loadTable();
+
+}
+
+
+
+function createRoomButtons(students){
+
+let rooms = new Set();
+
+students.forEach(s=>{
+rooms.add(s.class + "/" + s.room);
+});
+
+const container = document.getElementById("roomButtons");
+
+container.innerHTML="";
+
+container.innerHTML += `<button class="${currentRoom==="all"?"active":""}" onclick="selectRoom('all')">ทั้งหมด</button>`;
+
+rooms.forEach(r=>{
+
+let active = currentRoom===r ? "active" : "";
+
+container.innerHTML += `<button class="${active}" onclick="selectRoom('${r}')">${r}</button>`;
+
+});
+
+}
+
+
+
 async function loadTable(){
 
 try{
@@ -211,24 +205,22 @@ const studentSnap = await getDocs(collection(db,"students"));
 
 const attendanceSnap = await getDocs(collection(db,"attendance"));
 
-
 let students=[];
-
 let present=[];
 
-
 studentSnap.forEach(d=>{
-
 students.push({id:d.id,...d.data()});
-
 });
-
 
 attendanceSnap.forEach(d=>{
-
 present.push(d.data().studentId);
-
 });
+
+
+students.sort((a,b)=>a.id.localeCompare(b.id));
+
+
+createRoomButtons(students);
 
 
 const tbody = document.getElementById("studentTable");
@@ -236,20 +228,33 @@ const tbody = document.getElementById("studentTable");
 tbody.innerHTML="";
 
 
+let total = 0;
+let presentCount = 0;
+
+
 students.forEach(s=>{
+
+let roomName = s.class + "/" + s.room;
+
+if(currentRoom !== "all" && roomName !== currentRoom){
+return;
+}
+
+total++;
 
 let isPresent = present.includes(s.id);
 
+if(isPresent){
+presentCount++;
+}
 
 let status = isPresent
 ? '<span class="present">มา</span>'
 : '<span class="absent">ยังไม่มา</span>';
 
-
 let btn = isPresent
 ? '-'
 : `<button onclick="markPresent('${s.id}')">เช็คชื่อ</button>`;
-
 
 tbody.innerHTML += `
 
@@ -257,7 +262,7 @@ tbody.innerHTML += `
 
 <td>${s.id}</td>
 <td>${s.studentName}</td>
-<td>${s.class}/${s.room}</td>
+<td>${roomName}</td>
 <td>${status}</td>
 <td>${btn}</td>
 
@@ -268,8 +273,12 @@ tbody.innerHTML += `
 });
 
 
-log("โหลดตารางสำเร็จ");
+document.getElementById("totalStudents").innerText = total;
+document.getElementById("presentStudents").innerText = presentCount;
+document.getElementById("absentStudents").innerText = total - presentCount;
 
+
+log("โหลดตารางสำเร็จ");
 
 }catch(e){
 
@@ -278,18 +287,6 @@ log("Load Error : "+e);
 }
 
 }
-
-
-
-document.getElementById("studentId").addEventListener("keypress",function(e){
-
-if(e.key==="Enter"){
-
-checkStudent();
-
-}
-
-});
 
 
 window.onload = loadTable;
