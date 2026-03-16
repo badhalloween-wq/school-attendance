@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 <meta charset="UTF-8">
-<title>Teacher Check</title>
+<title>Teacher Check Debug</title>
 
 <script type="module">
 
@@ -19,37 +18,109 @@ collection
 
 import { firebaseConfig } from "./firebase-config.js";
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+let app;
+let db;
+
+try{
+
+  log("กำลังเริ่ม Firebase...");
+
+  app = initializeApp(firebaseConfig);
+
+  log("Firebase init สำเร็จ");
+
+  db = getFirestore(app);
+
+  log("เชื่อมต่อ Firestore สำเร็จ");
+
+}catch(e){
+
+  log("❌ Firebase init error : "+e.message);
+
+}
 
 window.checkStudent = async function(){
 
-const studentId = document.getElementById("studentId").value;
+  try{
 
-if(!studentId){
-alert("กรอกรหัสนักเรียน");
-return;
+    const studentId = document.getElementById("studentId").value;
+
+    if(!studentId){
+
+      log("❌ ไม่ได้กรอกรหัสนักเรียน");
+      return;
+
+    }
+
+    log("กำลังค้นหานักเรียน ID : "+studentId);
+
+    const studentRef = doc(db,"students",studentId);
+
+    const studentSnap = await getDoc(studentRef);
+
+    if(!studentSnap.exists()){
+
+      log("❌ ไม่พบ document students/"+studentId);
+      return;
+
+    }
+
+    log("พบข้อมูลนักเรียน");
+
+    const student = studentSnap.data();
+
+    if(!student.studentName){
+
+      log("❌ ไม่มี field studentName");
+      return;
+
+    }
+
+    if(!student.class){
+
+      log("❌ ไม่มี field class");
+      return;
+
+    }
+
+    if(!student.room){
+
+      log("❌ ไม่มี field room");
+      return;
+
+    }
+
+    log("กำลังบันทึก attendance...");
+
+    await addDoc(collection(db,"attendance"),{
+
+      studentId: studentId,
+      name: student.studentName,
+      class: student.class,
+      room: student.room,
+      time: new Date()
+
+    });
+
+    log("✅ เช็คชื่อสำเร็จ");
+
+  }
+
+  catch(e){
+
+    log("❌ ERROR : "+e.message);
+
+  }
+
 }
 
-const ref = doc(db,"students",studentId);
-const snap = await getDoc(ref);
+function log(msg){
 
-if(!snap.exists()){
-alert("ไม่พบรหัสนักเรียน");
-return;
-}
+  console.log(msg);
 
-const s = snap.data();
+  const div = document.getElementById("result");
 
-await addDoc(collection(db,"attendance"),{
-studentId: studentId,
-name: s.studentName,
-class: s.class,
-room: s.room,
-time: new Date()
-});
-
-alert("เช็คชื่อสำเร็จ");
+  div.innerHTML += msg+"<br>";
 
 }
 
@@ -57,13 +128,19 @@ alert("เช็คชื่อสำเร็จ");
 
 </head>
 
-<body>
+<body style="font-family:sans-serif;margin:40px">
 
-<h2>เช็คชื่อ</h2>
+<h2>Teacher Check (Debug Mode)</h2>
 
 <input id="studentId" placeholder="รหัสนักเรียน">
 
 <button onclick="checkStudent()">เช็คชื่อ</button>
+
+<hr>
+
+<h3>System Log</h3>
+
+<div id="result"></div>
 
 </body>
 </html>
