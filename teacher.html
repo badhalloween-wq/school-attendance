@@ -13,6 +13,26 @@
 
 <h2>เช็คชื่อนักเรียน</h2>
 
+<div class="filter-bar">
+
+<label>วันที่</label>
+<input type="date" id="dateSelect">
+
+<label>เทอม</label>
+<select id="termSelect">
+<option value="1">1</option>
+<option value="2">2</option>
+</select>
+
+<label>ปีการศึกษา</label>
+<select id="yearSelect">
+<option value="2569">2569</option>
+<option value="2570">2570</option>
+</select>
+
+</div>
+
+
 <div class="card">
 
 <h3>รายชื่อนักเรียน</h3>
@@ -94,6 +114,9 @@ document.getElementById("log").textContent += msg + "\n";
 let db;
 
 let currentRoom = "all";
+let currentDate = "";
+let currentTerm = "1";
+let currentYear = "2569";
 
 
 try{
@@ -139,6 +162,11 @@ studentId:studentId,
 name:s.studentName,
 class:s.class,
 room:s.room,
+
+date: currentDate,
+term: currentTerm,
+year: currentYear,
+
 time:new Date()
 
 });
@@ -202,7 +230,6 @@ try{
 log("โหลดรายชื่อนักเรียน");
 
 const studentSnap = await getDocs(collection(db,"students"));
-
 const attendanceSnap = await getDocs(collection(db,"attendance"));
 
 let students=[];
@@ -213,15 +240,22 @@ students.push({id:d.id,...d.data()});
 });
 
 attendanceSnap.forEach(d=>{
-present.push(d.data().studentId);
-});
 
+let a = d.data();
+
+if(
+a.date === currentDate &&
+a.term === currentTerm &&
+a.year === currentYear
+){
+present.push(a.studentId);
+}
+
+});
 
 students.sort((a,b)=>a.id.localeCompare(b.id));
 
-
 createRoomButtons(students);
-
 
 const tbody = document.getElementById("studentTable");
 
@@ -289,7 +323,41 @@ log("Load Error : "+e);
 }
 
 
-window.onload = loadTable;
+
+document.getElementById("dateSelect").onchange = function(){
+
+currentDate = this.value;
+loadTable();
+
+}
+
+document.getElementById("termSelect").onchange = function(){
+
+currentTerm = this.value;
+loadTable();
+
+}
+
+document.getElementById("yearSelect").onchange = function(){
+
+currentYear = this.value;
+loadTable();
+
+}
+
+
+
+window.onload = function(){
+
+let today = new Date().toISOString().split("T")[0];
+
+document.getElementById("dateSelect").value = today;
+
+currentDate = today;
+
+loadTable();
+
+}
 
 </script>
 
