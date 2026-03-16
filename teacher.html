@@ -1,248 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
 
 <meta charset="UTF-8">
-<title>Teacher Attendance</title>
+<title>Teacher Panel</title>
 
 <link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
 
 </head>
 
 <body>
 
-<h2>เช็คชื่อนักเรียน</h2>
+<div class="container">
 
-<div class="card">
+<h2>ระบบเช็คชื่อ</h2>
 
-<input id="studentId" placeholder="รหัสนักเรียน">
+<div class="toolbar">
 
-<button onclick="checkStudent()">เช็คชื่อ</button>
+<label>เลือกห้อง</label>
 
-<p id="msg"></p>
+<select id="roomFilter" onchange="renderStudents()">
+<option value="3/1" selected>ม.3/1</option>
+<option value="3/2">ม.3/2</option>
+</select>
 
 </div>
-
-
-<div class="card">
-
-<h3>รายชื่อนักเรียน</h3>
 
 <table>
 
 <thead>
+
 <tr>
 <th>รหัส</th>
 <th>ชื่อ</th>
 <th>ห้อง</th>
 <th>สถานะ</th>
+<th>จัดการ</th>
 </tr>
+
 </thead>
 
 <tbody id="studentTable"></tbody>
 
 </table>
 
-</div>
-
-
-<div class="card">
-
+<div class="logbox">
 <h3>System Log</h3>
-
-<pre id="log"></pre>
+<div id="log"></div>
+</div>
 
 </div>
 
+<script>
 
+let students = []
 
-<script type="module">
+log("กำลังเชื่อม Firebase...")
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+db.collection("students").onSnapshot((snapshot)=>{
 
-import {
-getFirestore,
-doc,
-getDoc,
-addDoc,
-collection,
-getDocs
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+students = []
 
-import { firebaseConfig } from "./firebase-config.js";
+snapshot.forEach(doc=>{
 
+students.push(doc.data())
 
-function log(msg){
+})
 
-console.log(msg);
+log("โหลดข้อมูลสำเร็จ")
 
-document.getElementById("log").textContent += msg + "\n";
+renderStudents()
 
-}
+},
+(err)=>{
 
+log("Firebase Error : "+err)
 
-let db;
+})
 
-try{
+function renderStudents(){
 
-log("กำลังเชื่อม Firebase...");
+const room = document.getElementById("roomFilter").value
 
-const app = initializeApp(firebaseConfig);
+const tbody = document.getElementById("studentTable")
 
-db = getFirestore(app);
-
-log("เชื่อม Firebase สำเร็จ");
-
-}catch(e){
-
-log("Firebase Error : "+e);
-
-}
-
-
-
-window.checkStudent = async function(){
-
-try{
-
-const studentId = document.getElementById("studentId").value;
-
-if(!studentId){
-
-document.getElementById("msg").innerText="กรอกรหัสนักเรียน";
-
-return;
-
-}
-
-log("ค้นหานักเรียน "+studentId);
-
-const ref = doc(db,"students",studentId);
-
-const snap = await getDoc(ref);
-
-
-if(!snap.exists()){
-
-log("ไม่พบข้อมูลนักเรียน");
-
-document.getElementById("msg").innerText="ไม่พบรหัส";
-
-return;
-
-}
-
-
-const s = snap.data();
-
-log("พบข้อมูล "+s.studentName);
-
-
-await addDoc(collection(db,"attendance"),{
-
-studentId:studentId,
-name:s.studentName,
-class:s.class,
-room:s.room,
-time:new Date()
-
-});
-
-log("บันทึกการเช็คชื่อสำเร็จ");
-
-document.getElementById("msg").innerText="เช็คชื่อสำเร็จ";
-
-loadTable();
-
-
-}catch(e){
-
-log("Check Error : "+e);
-
-}
-
-}
-
-
-
-async function loadTable(){
-
-try{
-
-log("โหลดรายชื่อนักเรียน");
-
-const studentSnap = await getDocs(collection(db,"students"));
-
-const attendanceSnap = await getDocs(collection(db,"attendance"));
-
-
-let students=[];
-let present=[];
-
-
-studentSnap.forEach(d=>{
-
-students.push({id:d.id,...d.data()});
-
-});
-
-
-attendanceSnap.forEach(d=>{
-
-present.push(d.data().studentId);
-
-});
-
-
-const tbody = document.getElementById("studentTable");
-
-tbody.innerHTML="";
-
+tbody.innerHTML=""
 
 students.forEach(s=>{
 
-let status = present.includes(s.id)
+if(s.room !== room) return
 
-? '<span class="present">มา</span>'
+const tr=document.createElement("tr")
 
-: '<span class="absent">ยังไม่มา</span>';
+const statusClass = s.status==="มา" ? "present":"absent"
 
-
-tbody.innerHTML += `
-
-<tr>
+tr.innerHTML=`
 
 <td>${s.id}</td>
 
-<td>${s.studentName}</td>
+<td>${s.name}</td>
 
-<td>${s.class}/${s.room}</td>
+<td>${s.room}</td>
 
-<td>${status}</td>
+<td class="${statusClass}">${s.status}</td>
 
-</tr>
+<td>
 
-`;
+<button class="btn-toggle"
 
-});
+onclick="toggleStatus('${s.id}','${s.status}')">
 
+เปลี่ยนสถานะ
 
-log("โหลดตารางสำเร็จ");
+</button>
 
+</td>
 
-}catch(e){
+`
 
-log("Load Error : "+e);
+tbody.appendChild(tr)
+
+})
 
 }
 
+function toggleStatus(id,status){
+
+const newStatus = status==="มา" ? "ยังไม่มา":"มา"
+
+db.collection("students")
+
+.doc(id)
+
+.update({
+
+status:newStatus
+
+})
+
+.then(()=>{
+
+log("เปลี่ยนสถานะ "+id+" สำเร็จ")
+
+})
+
+.catch(err=>{
+
+log("Update Error : "+err)
+
+})
+
 }
 
+function log(msg){
 
-window.onload = loadTable;
+const box=document.getElementById("log")
+
+const line=document.createElement("div")
+
+line.innerText=msg
+
+box.appendChild(line)
+
+}
 
 </script>
-
 
 </body>
 </html>
