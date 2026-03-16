@@ -1,141 +1,248 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
-<title>ระบบเช็คชื่อ</title>
+<title>Teacher Attendance</title>
 
 <link rel="stylesheet" href="style.css">
-
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
 
 </head>
 
 <body>
 
-<h2>ระบบเช็คชื่อ</h2>
+<h2>เช็คชื่อนักเรียน</h2>
 
-<div class="controls">
-<input id="studentIdInput" placeholder="กรอกรหัสนักเรียน">
+<div class="card">
+
+<input id="studentId" placeholder="รหัสนักเรียน">
+
 <button onclick="checkStudent()">เช็คชื่อ</button>
+
+<p id="msg"></p>
+
 </div>
 
+
+<div class="card">
+
+<h3>รายชื่อนักเรียน</h3>
+
 <table>
+
 <thead>
 <tr>
 <th>รหัส</th>
 <th>ชื่อ</th>
+<th>ห้อง</th>
+<th>สถานะ</th>
 </tr>
 </thead>
+
 <tbody id="studentTable"></tbody>
+
 </table>
 
+</div>
+
+
+<div class="card">
+
 <h3>System Log</h3>
-<div id="log"></div>
 
-<script>
+<pre id="log"></pre>
 
-const db = firebase.firestore()
+</div>
 
-const table = document.getElementById("studentTable")
-const log = document.getElementById("log")
 
-function writeLog(msg){
-log.innerHTML += msg + "<br>"
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
+import {
+getFirestore,
+doc,
+getDoc,
+addDoc,
+collection,
+getDocs
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+import { firebaseConfig } from "./firebase-config.js";
+
+
+function log(msg){
+
+console.log(msg);
+
+document.getElementById("log").textContent += msg + "\n";
+
 }
 
-async function loadStudents(){
 
-table.innerHTML=""
-
-writeLog("โหลดรายชื่อนักเรียน...")
+let db;
 
 try{
 
-const studentsSnapshot = await db.collection("students").get()
-const attendanceSnapshot = await db.collection("attendance").get()
+log("กำลังเชื่อม Firebase...");
 
-let attendanceMap = {}
+const app = initializeApp(firebaseConfig);
 
-attendanceSnapshot.forEach(doc=>{
-const data = doc.data()
-attendanceMap[data.studentId] = true
-})
+db = getFirestore(app);
 
-studentsSnapshot.forEach(doc=>{
+log("เชื่อม Firebase สำเร็จ");
 
-const data = doc.data()
-const studentId = doc.id
+}catch(e){
 
-const row = document.createElement("tr")
-
-row.innerHTML = `
-<td>${studentId}</td>
-<td>${data.studentName}</td>
-`
-
-table.appendChild(row)
-
-})
-
-writeLog("โหลดเสร็จ "+studentsSnapshot.size+" คน")
-
-}catch(error){
-
-writeLog("ERROR: "+error)
+log("Firebase Error : "+e);
 
 }
 
-}
 
-async function checkStudent(){
 
-const studentId = document.getElementById("studentIdInput").value
+window.checkStudent = async function(){
+
+try{
+
+const studentId = document.getElementById("studentId").value;
 
 if(!studentId){
-writeLog("กรุณากรอกรหัสนักเรียน")
-return
+
+document.getElementById("msg").innerText="กรอกรหัสนักเรียน";
+
+return;
+
 }
 
-writeLog("เช็คชื่อ "+studentId)
+log("ค้นหานักเรียน "+studentId);
+
+const ref = doc(db,"students",studentId);
+
+const snap = await getDoc(ref);
+
+
+if(!snap.exists()){
+
+log("ไม่พบข้อมูลนักเรียน");
+
+document.getElementById("msg").innerText="ไม่พบรหัส";
+
+return;
+
+}
+
+
+const s = snap.data();
+
+log("พบข้อมูล "+s.studentName);
+
+
+await addDoc(collection(db,"attendance"),{
+
+studentId:studentId,
+name:s.studentName,
+class:s.class,
+room:s.room,
+time:new Date()
+
+});
+
+log("บันทึกการเช็คชื่อสำเร็จ");
+
+document.getElementById("msg").innerText="เช็คชื่อสำเร็จ";
+
+loadTable();
+
+
+}catch(e){
+
+log("Check Error : "+e);
+
+}
+
+}
+
+
+
+async function loadTable(){
 
 try{
 
-const studentDoc = await db.collection("students").doc(studentId).get()
+log("โหลดรายชื่อนักเรียน");
 
-if(!studentDoc.exists){
+const studentSnap = await getDocs(collection(db,"students"));
 
-writeLog("ไม่พบรหัสนักเรียน")
-return
+const attendanceSnap = await getDocs(collection(db,"attendance"));
+
+
+let students=[];
+let present=[];
+
+
+studentSnap.forEach(d=>{
+
+students.push({id:d.id,...d.data()});
+
+});
+
+
+attendanceSnap.forEach(d=>{
+
+present.push(d.data().studentId);
+
+});
+
+
+const tbody = document.getElementById("studentTable");
+
+tbody.innerHTML="";
+
+
+students.forEach(s=>{
+
+let status = present.includes(s.id)
+
+? '<span class="present">มา</span>'
+
+: '<span class="absent">ยังไม่มา</span>';
+
+
+tbody.innerHTML += `
+
+<tr>
+
+<td>${s.id}</td>
+
+<td>${s.studentName}</td>
+
+<td>${s.class}/${s.room}</td>
+
+<td>${status}</td>
+
+</tr>
+
+`;
+
+});
+
+
+log("โหลดตารางสำเร็จ");
+
+
+}catch(e){
+
+log("Load Error : "+e);
 
 }
 
-const data = studentDoc.data()
-
-await db.collection("attendance").add({
-
-studentId: studentId,
-name: data.studentName,
-time: firebase.firestore.FieldValue.serverTimestamp()
-
-})
-
-writeLog("เช็คชื่อสำเร็จ "+data.studentName)
-
-document.getElementById("studentIdInput").value=""
-
-}catch(error){
-
-writeLog("ERROR: "+error)
-
 }
 
-}
 
-loadStudents()
+window.onload = loadTable;
 
 </script>
+
 
 </body>
 </html>
