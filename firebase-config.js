@@ -1,14 +1,11 @@
-const firebaseConfig = {
-apiKey: "AIzaSyDw7Fa7nhtJCXx-aUT_iJDpMQMKxbDKrhI",
-authDomain: "school-attendance-24eda.firebaseapp.com",
-projectId: "school-attendance-24eda",
-storageBucket: "school-attendance-24eda.firebasestorage.app",
-messagingSenderId: "624706301213",
-appId: "1:624706301213:web:16d552080d727b44b685f4"
+export const firebaseConfig = {
+  apiKey: "AIzaSyDw7Fa7nhtJCXx-aUT_iJDpMQMKxbDKrhI",
+  authDomain: "school-attendance-24eda.firebaseapp.com",
+  projectId: "school-attendance-24eda",
+  storageBucket: "school-attendance-24eda.firebasestorage.app",
+  messagingSenderId: "624706301213",
+  appId: "1:624706301213:web:16d552080d727b44b685f4"
 };
-
-firebase.initializeApp(firebaseConfig);
-
 /*
 const db = firebase.firestore();
 
