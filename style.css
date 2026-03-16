@@ -1,4 +1,4 @@
-/* layout */
+/* ===== Layout ===== */
 
 body{
 font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
@@ -11,9 +11,11 @@ color:#333;
 h2{
 text-align:center;
 margin-bottom:25px;
+font-weight:600;
 }
 
-/* card */
+
+/* ===== Card ===== */
 
 .card{
 background:white;
@@ -23,49 +25,68 @@ border-radius:12px;
 box-shadow:0 4px 15px rgba(0,0,0,0.08);
 }
 
-/* input */
 
-input{
+/* ===== Dashboard ===== */
+
+.dashboard{
+display:flex;
+gap:10px;
+margin-bottom:15px;
+flex-wrap:wrap;
+}
+
+.stat{
+background:#f1f5f9;
 padding:12px;
-font-size:16px;
-border:1px solid #d0d5dd;
-border-radius:8px;
-width:180px;
-outline:none;
+border-radius:10px;
+text-align:center;
+flex:1;
+min-width:100px;
 }
 
-input:focus{
-border-color:#3b82f6;
+.stat span{
+font-size:22px;
+font-weight:bold;
+display:block;
+color:#2563eb;
 }
 
-/* button */
+.stat p{
+margin:0;
+font-size:13px;
+color:#555;
+}
 
-button{
-padding:10px 16px;
+
+/* ===== Room Filter ===== */
+
+.room-filter{
+margin-bottom:15px;
+}
+
+.room-filter button{
+margin-right:6px;
+margin-bottom:6px;
+padding:8px 14px;
 border:none;
 border-radius:8px;
-background:#3b82f6;
+background:#64748b;
 color:white;
-font-size:14px;
+font-size:13px;
 cursor:pointer;
 transition:0.2s;
 }
 
-button:hover{
-background:#2563eb;
+.room-filter button:hover{
+background:#475569;
 }
 
-/* attendance button */
-
-td button{
-background:#16a34a;
+.room-filter button.active{
+background:#3b82f6;
 }
 
-td button:hover{
-background:#15803d;
-}
 
-/* table */
+/* ===== Table ===== */
 
 table{
 width:100%;
@@ -87,13 +108,29 @@ border-bottom:1px solid #eee;
 font-size:14px;
 }
 
-/* hover row */
-
 tr:hover{
 background:#f9fafb;
 }
 
-/* status badge */
+
+/* ===== Attendance Button ===== */
+
+td button{
+background:#16a34a;
+color:white;
+padding:7px 12px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-size:13px;
+}
+
+td button:hover{
+background:#15803d;
+}
+
+
+/* ===== Status ===== */
 
 .present{
 background:#dcfce7;
@@ -113,7 +150,8 @@ font-size:12px;
 font-weight:600;
 }
 
-/* log box */
+
+/* ===== System Log ===== */
 
 #log{
 background:#111;
@@ -125,24 +163,25 @@ max-height:200px;
 overflow:auto;
 }
 
-/* message */
 
-#msg{
-margin-top:10px;
-font-weight:600;
-color:#2563eb;
-}
-
-/* mobile */
+/* ===== Mobile ===== */
 
 @media(max-width:600px){
+
+body{
+padding:12px;
+}
 
 table{
 font-size:13px;
 }
 
-input{
-width:140px;
+th,td{
+padding:10px;
+}
+
+.stat span{
+font-size:18px;
 }
 
 }
