@@ -2,102 +2,143 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>รายชื่อนักเรียน</title>
+<title>ระบบเช็คชื่อ</title>
+
+<link rel="stylesheet" href="style.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-
 <script src="firebase-config.js"></script>
-
-<style>
-body{
-font-family: sans-serif;
-}
-
-.room{
-margin-top:30px;
-}
-
-table{
-border-collapse: collapse;
-width:300px;
-}
-
-td,th{
-border:1px solid #ccc;
-padding:6px;
-}
-</style>
 
 </head>
 
 <body>
 
-<h2>รายชื่อนักเรียน</h2>
+<h2>ระบบเช็คชื่อ</h2>
 
-<div id="studentList"></div>
+<div class="controls">
+
+<input id="studentIdInput" placeholder="กรอกรหัสนักเรียน">
+
+<button onclick="checkStudent()">เช็คชื่อ</button>
+
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>รหัส</th>
+<th>ชื่อ</th>
+<th>ชั้น</th>
+<th>ห้อง</th>
+<th>สถานะ</th>
+</tr>
+</thead>
+
+<tbody id="studentTable"></tbody>
+
+</table>
+
+<h3>System Log</h3>
+<div id="log"></div>
 
 <script>
 
 const db = firebase.firestore()
-const container = document.getElementById("studentList")
+
+const table = document.getElementById("studentTable")
+const log = document.getElementById("log")
+
+function writeLog(msg){
+log.innerHTML += msg + "<br>"
+}
 
 async function loadStudents(){
 
-container.innerHTML="กำลังโหลด..."
+table.innerHTML=""
 
-const snapshot = await db.collection("students").get()
+writeLog("โหลดรายชื่อนักเรียน...")
 
-let rooms = {}
+const studentsSnapshot = await db.collection("students").get()
+const attendanceSnapshot = await db.collection("attendance").get()
 
-snapshot.forEach(doc=>{
+let attendanceMap = {}
+
+attendanceSnapshot.forEach(doc=>{
 
 const data = doc.data()
-const id = doc.id
 
-const key = "ม."+data.class+"/"+data.room
+attendanceMap[data.studentId] = true
 
-if(!rooms[key]){
-rooms[key] = []
+})
+
+studentsSnapshot.forEach(doc=>{
+
+const data = doc.data()
+
+const studentId = doc.id
+
+let status = "ยังไม่มา"
+
+if(attendanceMap[studentId]){
+status = "มา"
 }
 
-rooms[key].push({
-id:id,
-name:data.studentName
-})
+const row = document.createElement("tr")
 
-})
-
-container.innerHTML=""
-
-for(const room in rooms){
-
-let html = `
-<div class="room">
-<h3>${room}</h3>
-<table>
-<tr>
-<th>รหัส</th>
-<th>ชื่อ</th>
-</tr>
+row.innerHTML = `
+<td>${studentId}</td>
+<td>${data.studentName}</td>
+<td>${data.class}</td>
+<td>${data.room}</td>
+<td>${status}</td>
 `
 
-rooms[room].forEach(s=>{
-
-html += `
-<tr>
-<td>${s.id}</td>
-<td>${s.name}</td>
-</tr>
-`
+table.appendChild(row)
 
 })
 
-html += "</table></div>"
-
-container.innerHTML += html
+writeLog("โหลดเสร็จ")
 
 }
+
+async function checkStudent(){
+
+const studentId = document.getElementById("studentIdInput").value
+
+if(!studentId){
+writeLog("กรุณากรอกรหัสนักเรียน")
+return
+}
+
+writeLog("กำลังเช็คชื่อ "+studentId)
+
+const studentDoc = await db.collection("students").doc(studentId).get()
+
+if(!studentDoc.exists){
+
+writeLog("ไม่พบรหัสนักเรียน")
+
+return
+
+}
+
+const data = studentDoc.data()
+
+await db.collection("attendance").add({
+
+studentId: studentId,
+name: data.studentName,
+time: firebase.firestore.FieldValue.serverTimestamp()
+
+})
+
+writeLog("เช็คชื่อสำเร็จ "+data.studentName)
+
+document.getElementById("studentIdInput").value=""
+
+loadStudents()
 
 }
 
@@ -107,4 +148,3 @@ loadStudents()
 
 </body>
 </html>
-
