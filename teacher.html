@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-
 <meta charset="UTF-8">
-<title>Teacher Panel</title>
+<title>Teacher Check Attendance</title>
 
 <link rel="stylesheet" href="style.css">
 
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
 <script src="firebase-config.js"></script>
 
@@ -16,25 +15,15 @@
 
 <body>
 
-<div class="container">
-
 <h2>ระบบเช็คชื่อ</h2>
 
-<div class="toolbar">
-
-<label>เลือกห้อง</label>
-
-<select id="roomFilter" onchange="renderStudents()">
-<option value="3/1" selected>ม.3/1</option>
+<select id="roomSelect">
+<option value="3/1">ม.3/1</option>
 <option value="3/2">ม.3/2</option>
 </select>
 
-</div>
-
 <table>
-
 <thead>
-
 <tr>
 <th>รหัส</th>
 <th>ชื่อ</th>
@@ -42,132 +31,128 @@
 <th>สถานะ</th>
 <th>จัดการ</th>
 </tr>
-
 </thead>
 
 <tbody id="studentTable"></tbody>
 
 </table>
 
-<div class="logbox">
 <h3>System Log</h3>
 <div id="log"></div>
-</div>
-
-</div>
 
 <script>
 
-let students = []
+const db = firebase.firestore()
 
-log("กำลังเชื่อม Firebase...")
+function log(msg){
+document.getElementById("log").innerHTML += "<div>"+msg+"</div>"
+}
 
-db.collection("students").onSnapshot((snapshot)=>{
+function todayDate(){
+const d = new Date()
+return d.toISOString().split('T')[0]
+}
 
-students = []
+async function loadStudents(){
 
-snapshot.forEach(doc=>{
+const room = document.getElementById("roomSelect").value
+const today = todayDate()
 
-students.push(doc.data())
+log("กำลังโหลดนักเรียน...")
+
+try{
+
+const studentsSnapshot = await db.collection("students")
+.where("room","==",room)
+.get()
+
+const attendanceSnapshot = await db.collection("attendance")
+.where("date","==",today)
+.get()
+
+let attendanceMap = {}
+
+attendanceSnapshot.forEach(doc=>{
+const data = doc.data()
+attendanceMap[data.studentId] = data.status
+})
+
+const table = document.getElementById("studentTable")
+table.innerHTML = ""
+
+studentsSnapshot.forEach(doc=>{
+
+const s = doc.data()
+
+let status = attendanceMap[s.id] || "ยังไม่มา"
+
+const row = `
+<tr>
+
+<td>${s.id}</td>
+<td>${s.name}</td>
+<td>${s.room}</td>
+
+<td id="status-${s.id}">
+${status}
+</td>
+
+<td>
+
+<button onclick="updateStatus('${s.id}','มา')">มา</button>
+<button onclick="updateStatus('${s.id}','ขาด')">ขาด</button>
+<button onclick="updateStatus('${s.id}','สาย')">สาย</button>
+
+</td>
+
+</tr>
+`
+
+table.innerHTML += row
 
 })
 
 log("โหลดข้อมูลสำเร็จ")
 
-renderStudents()
+}catch(err){
 
-},
-(err)=>{
-
-log("Firebase Error : "+err)
-
-})
-
-function renderStudents(){
-
-const room = document.getElementById("roomFilter").value
-
-const tbody = document.getElementById("studentTable")
-
-tbody.innerHTML=""
-
-students.forEach(s=>{
-
-if(s.room !== room) return
-
-const tr=document.createElement("tr")
-
-const statusClass = s.status==="มา" ? "present":"absent"
-
-tr.innerHTML=`
-
-<td>${s.id}</td>
-
-<td>${s.name}</td>
-
-<td>${s.room}</td>
-
-<td class="${statusClass}">${s.status}</td>
-
-<td>
-
-<button class="btn-toggle"
-
-onclick="toggleStatus('${s.id}','${s.status}')">
-
-เปลี่ยนสถานะ
-
-</button>
-
-</td>
-
-`
-
-tbody.appendChild(tr)
-
-})
+log("ERROR : "+err)
 
 }
 
-function toggleStatus(id,status){
+}
 
-const newStatus = status==="มา" ? "ยังไม่มา":"มา"
+async function updateStatus(studentId,status){
 
-db.collection("students")
+const today = todayDate()
 
-.doc(id)
+const docId = today+"_"+studentId
 
-.update({
+try{
 
-status:newStatus
+await db.collection("attendance").doc(docId).set({
 
-})
-
-.then(()=>{
-
-log("เปลี่ยนสถานะ "+id+" สำเร็จ")
+studentId: studentId,
+date: today,
+status: status
 
 })
 
-.catch(err=>{
+document.getElementById("status-"+studentId).innerText = status
 
-log("Update Error : "+err)
+log("อัปเดต "+studentId+" เป็น "+status)
 
-})
+}catch(err){
+
+log("ERROR update : "+err)
 
 }
 
-function log(msg){
-
-const box=document.getElementById("log")
-
-const line=document.createElement("div")
-
-line.innerText=msg
-
-box.appendChild(line)
-
 }
+
+document.getElementById("roomSelect").addEventListener("change",loadStudents)
+
+loadStudents()
 
 </script>
 
