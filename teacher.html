@@ -1,40 +1,15 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-
 <meta charset="UTF-8">
 <title>ระบบเช็คชื่อ</title>
+
+<link rel="stylesheet" href="style.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-
-<style>
-
-body{
-font-family:sans-serif;
-padding:20px;
-}
-
-table{
-border-collapse:collapse;
-width:100%;
-margin-top:10px;
-}
-
-th,td{
-border:1px solid #ccc;
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#eee;
-}
-
-</style>
-
 </head>
 
 <body>
@@ -44,23 +19,17 @@ background:#eee;
 เลือกห้อง
 
 <select id="roomSelect">
-
-<option value="3/1">ม.3/1</option>
-<option value="3/2">ม.3/2</option>
-<option value="3/3">ม.3/3</option>
-
+<option value="1">ม.3/1</option>
+<option value="2">ม.3/2</option>
 </select>
 
 <table>
-
 <thead>
 <tr>
-
 <th>รหัส</th>
 <th>ชื่อ</th>
 <th>ห้อง</th>
 <th>สถานะ</th>
-
 </tr>
 </thead>
 
@@ -69,45 +38,33 @@ background:#eee;
 </table>
 
 <h3>System Log</h3>
-
 <div id="log"></div>
 
 <script>
 
 const db = firebase.firestore()
 
-function log(text){
+const table = document.getElementById("studentTable")
+const log = document.getElementById("log")
+const roomSelect = document.getElementById("roomSelect")
 
-document.getElementById("log").innerHTML += "<div>"+text+"</div>"
-
-}
-
-function today(){
-
-const d = new Date()
-
-return d.toISOString().split("T")[0]
-
+function writeLog(msg){
+log.innerHTML += msg + "<br>"
 }
 
 async function loadStudents(){
 
-const room = document.getElementById("roomSelect").value
-const date = today()
+table.innerHTML=""
 
-log("กำลังโหลดนักเรียน ห้อง "+room)
+const room = roomSelect.value
 
-try{
+writeLog("โหลดข้อมูลห้อง "+room)
 
 const studentsSnapshot = await db.collection("students").get()
+const attendanceSnapshot = await db.collection("attendance").get()
 
-log("โหลด students แล้ว")
-
-const attendanceSnapshot = await db.collection("attendance")
-.where("date","==",date)
-.get()
-
-log("โหลด attendance แล้ว")
+writeLog("students:"+studentsSnapshot.size)
+writeLog("attendance:"+attendanceSnapshot.size)
 
 let attendanceMap = {}
 
@@ -119,66 +76,73 @@ attendanceMap[a.studentId] = a.time
 
 })
 
-const table = document.getElementById("studentTable")
-
-table.innerHTML=""
-
 studentsSnapshot.forEach(doc=>{
 
-const s = doc.data()
+const data = doc.data()
+const studentId = doc.id
 
-if(s.room != room) return
+if(data.room != room) return
 
 let status = "ยังไม่มา"
 let time = "-"
 
-if(attendanceMap[s.id]){
+if(attendanceMap[studentId]){
 
 status="มา"
-time=attendanceMap[s.id]
+
+const t = attendanceMap[studentId]
+
+if(t.seconds){
+time = new Date(t.seconds*1000).toLocaleTimeString()
+}
 
 }
 
-const row = `
+const row = document.createElement("tr")
 
-<tr>
+row.innerHTML=`
 
-<td>${s.id}</td>
-<td>${s.name}</td>
-<td>${s.room}</td>
-
+<td>${studentId}</td>
+<td>${data.studentName}</td>
+<td>${data.room}</td>
 <td>
-
-${status}
-<br>
-<small>${time}</small>
-
+${status}<br>
+<small>${time}</small><br>
+<button onclick="checkIn('${studentId}','${data.studentName}','${data.room}')">
+เช็คชื่อ
+</button>
 </td>
-
-</tr>
 
 `
 
-table.innerHTML+=row
+table.appendChild(row)
 
 })
 
-log("โหลดตารางสำเร็จ")
+}
 
-}catch(err){
+async function checkIn(studentId,name,room){
 
-log("ERROR : "+err)
+await db.collection("attendance").add({
+
+studentId:studentId,
+name:name,
+room:room,
+time:firebase.firestore.FieldValue.serverTimestamp()
+
+})
+
+writeLog("เช็คชื่อ "+name)
+
+loadStudents()
 
 }
 
-}
-
-document.getElementById("roomSelect").addEventListener("change",loadStudents)
+roomSelect.addEventListener("change",loadStudents)
 
 loadStudents()
 
 </script>
 
 </body>
-
 </html>
