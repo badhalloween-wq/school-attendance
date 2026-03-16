@@ -17,27 +17,18 @@
 <h2>ระบบเช็คชื่อ</h2>
 
 <div class="controls">
-
 <input id="studentIdInput" placeholder="กรอกรหัสนักเรียน">
-
 <button onclick="checkStudent()">เช็คชื่อ</button>
-
 </div>
 
 <table>
-
 <thead>
 <tr>
 <th>รหัส</th>
 <th>ชื่อ</th>
-<th>ชั้น</th>
-<th>ห้อง</th>
-<th>สถานะ</th>
 </tr>
 </thead>
-
 <tbody id="studentTable"></tbody>
-
 </table>
 
 <h3>System Log</h3>
@@ -60,46 +51,41 @@ table.innerHTML=""
 
 writeLog("โหลดรายชื่อนักเรียน...")
 
+try{
+
 const studentsSnapshot = await db.collection("students").get()
 const attendanceSnapshot = await db.collection("attendance").get()
 
 let attendanceMap = {}
 
 attendanceSnapshot.forEach(doc=>{
-
 const data = doc.data()
-
 attendanceMap[data.studentId] = true
-
 })
 
 studentsSnapshot.forEach(doc=>{
 
 const data = doc.data()
-
 const studentId = doc.id
-
-let status = "ยังไม่มา"
-
-if(attendanceMap[studentId]){
-status = "มา"
-}
 
 const row = document.createElement("tr")
 
 row.innerHTML = `
 <td>${studentId}</td>
 <td>${data.studentName}</td>
-<td>${data.class}</td>
-<td>${data.room}</td>
-<td>${status}</td>
 `
 
 table.appendChild(row)
 
 })
 
-writeLog("โหลดเสร็จ")
+writeLog("โหลดเสร็จ "+studentsSnapshot.size+" คน")
+
+}catch(error){
+
+writeLog("ERROR: "+error)
+
+}
 
 }
 
@@ -112,14 +98,15 @@ writeLog("กรุณากรอกรหัสนักเรียน")
 return
 }
 
-writeLog("กำลังเช็คชื่อ "+studentId)
+writeLog("เช็คชื่อ "+studentId)
+
+try{
 
 const studentDoc = await db.collection("students").doc(studentId).get()
 
 if(!studentDoc.exists){
 
 writeLog("ไม่พบรหัสนักเรียน")
-
 return
 
 }
@@ -138,7 +125,11 @@ writeLog("เช็คชื่อสำเร็จ "+data.studentName)
 
 document.getElementById("studentIdInput").value=""
 
-loadStudents()
+}catch(error){
+
+writeLog("ERROR: "+error)
+
+}
 
 }
 
