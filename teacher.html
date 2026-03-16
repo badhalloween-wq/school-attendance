@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Teacher Check Attendance</title>
+
+<title>Teacher Attendance</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -17,19 +18,20 @@
 
 <h2>ระบบเช็คชื่อ</h2>
 
+เลือกห้อง
 <select id="roomSelect">
 <option value="3/1">ม.3/1</option>
 <option value="3/2">ม.3/2</option>
 </select>
 
 <table>
+
 <thead>
 <tr>
 <th>รหัส</th>
 <th>ชื่อ</th>
 <th>ห้อง</th>
 <th>สถานะ</th>
-<th>จัดการ</th>
 </tr>
 </thead>
 
@@ -58,7 +60,7 @@ async function loadStudents(){
 const room = document.getElementById("roomSelect").value
 const today = todayDate()
 
-log("กำลังโหลดนักเรียน...")
+log("กำลังโหลดข้อมูล...")
 
 try{
 
@@ -73,8 +75,11 @@ const attendanceSnapshot = await db.collection("attendance")
 let attendanceMap = {}
 
 attendanceSnapshot.forEach(doc=>{
+
 const data = doc.data()
-attendanceMap[data.studentId] = data.status
+
+attendanceMap[data.studentId] = data.time
+
 })
 
 const table = document.getElementById("studentTable")
@@ -84,7 +89,9 @@ studentsSnapshot.forEach(doc=>{
 
 const s = doc.data()
 
-let status = attendanceMap[s.id] || "ยังไม่มา"
+let status = attendanceMap[s.id] ? "มา" : "ยังไม่มา"
+
+let time = attendanceMap[s.id] ? attendanceMap[s.id] : "-"
 
 const row = `
 <tr>
@@ -93,15 +100,11 @@ const row = `
 <td>${s.name}</td>
 <td>${s.room}</td>
 
-<td id="status-${s.id}">
-${status}
-</td>
-
 <td>
 
-<button onclick="updateStatus('${s.id}','มา')">มา</button>
-<button onclick="updateStatus('${s.id}','ขาด')">ขาด</button>
-<button onclick="updateStatus('${s.id}','สาย')">สาย</button>
+${status}
+<br>
+<small>${time}</small>
 
 </td>
 
@@ -117,34 +120,6 @@ log("โหลดข้อมูลสำเร็จ")
 }catch(err){
 
 log("ERROR : "+err)
-
-}
-
-}
-
-async function updateStatus(studentId,status){
-
-const today = todayDate()
-
-const docId = today+"_"+studentId
-
-try{
-
-await db.collection("attendance").doc(docId).set({
-
-studentId: studentId,
-date: today,
-status: status
-
-})
-
-document.getElementById("status-"+studentId).innerText = status
-
-log("อัปเดต "+studentId+" เป็น "+status)
-
-}catch(err){
-
-log("ERROR update : "+err)
 
 }
 
