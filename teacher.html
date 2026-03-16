@@ -36,6 +36,7 @@
 <th>ชื่อ</th>
 <th>ห้อง</th>
 <th>สถานะ</th>
+<th>เช็คชื่อ</th>
 </tr>
 </thead>
 
@@ -75,7 +76,6 @@ import { firebaseConfig } from "./firebase-config.js";
 function log(msg){
 
 console.log(msg);
-
 document.getElementById("log").textContent += msg + "\n";
 
 }
@@ -105,12 +105,13 @@ window.checkStudent = async function(){
 
 try{
 
-const studentId = document.getElementById("studentId").value;
+const input = document.getElementById("studentId");
+
+const studentId = input.value.trim();
 
 if(!studentId){
 
 document.getElementById("msg").innerText="กรอกรหัสนักเรียน";
-
 return;
 
 }
@@ -135,8 +136,55 @@ return;
 
 const s = snap.data();
 
-log("พบข้อมูล "+s.studentName);
+await addDoc(collection(db,"attendance"),{
 
+studentId:studentId,
+name:s.studentName,
+class:s.class,
+room:s.room,
+time:new Date()
+
+});
+
+
+log("เช็คชื่อสำเร็จ "+s.studentName);
+
+document.getElementById("msg").innerText="เช็คชื่อแล้ว : "+s.studentName;
+
+input.value="";
+
+loadTable();
+
+
+}catch(e){
+
+log("Check Error : "+e);
+
+}
+
+}
+
+
+
+window.markPresent = async function(studentId){
+
+try{
+
+log("เช็คชื่อจากปุ่ม "+studentId);
+
+const ref = doc(db,"students",studentId);
+
+const snap = await getDoc(ref);
+
+if(!snap.exists()){
+
+log("ไม่พบข้อมูล");
+
+return;
+
+}
+
+const s = snap.data();
 
 await addDoc(collection(db,"attendance"),{
 
@@ -148,16 +196,14 @@ time:new Date()
 
 });
 
-log("บันทึกการเช็คชื่อสำเร็จ");
 
-document.getElementById("msg").innerText="เช็คชื่อสำเร็จ";
+log("บันทึกการเช็คชื่อสำเร็จ");
 
 loadTable();
 
-
 }catch(e){
 
-log("Check Error : "+e);
+log("Mark Error : "+e);
 
 }
 
@@ -177,6 +223,7 @@ const attendanceSnap = await getDocs(collection(db,"attendance"));
 
 
 let students=[];
+
 let present=[];
 
 
@@ -201,11 +248,17 @@ tbody.innerHTML="";
 
 students.forEach(s=>{
 
-let status = present.includes(s.id)
+let isPresent = present.includes(s.id);
 
+
+let status = isPresent
 ? '<span class="present">มา</span>'
-
 : '<span class="absent">ยังไม่มา</span>';
+
+
+let btn = isPresent
+? '-'
+: `<button onclick="markPresent('${s.id}')">เช็คชื่อ</button>`;
 
 
 tbody.innerHTML += `
@@ -213,12 +266,10 @@ tbody.innerHTML += `
 <tr>
 
 <td>${s.id}</td>
-
 <td>${s.studentName}</td>
-
 <td>${s.class}/${s.room}</td>
-
 <td>${status}</td>
+<td>${btn}</td>
 
 </tr>
 
@@ -237,6 +288,18 @@ log("Load Error : "+e);
 }
 
 }
+
+
+
+document.getElementById("studentId").addEventListener("keypress",function(e){
+
+if(e.key==="Enter"){
+
+checkStudent();
+
+}
+
+});
 
 
 window.onload = loadTable;
